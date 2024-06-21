@@ -1,0 +1,2 @@
+spectra-1.csv (text/csv) 5421190 bytes.
+chemical_analysis.xlsx (application/vnd.openxmlformats-officedocument.spreadsheetml.sheet) 53647 bytes.
