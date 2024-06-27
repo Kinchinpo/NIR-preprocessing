@@ -2,6 +2,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import pywt
+from skimage.transform import resize
+import cv2
+import os
+import random
+import matplotlib.image as mpimg
+
 file_path = r'dataverse_files/spectra-1.csv'
 df = pd.read_csv(file_path)
 print(df.shape)
@@ -11,7 +17,6 @@ wavelength = np.array([float(item[:-3]) if item.endswith('_nm') else item for it
 absorbance = df.values[:][0:]
 absorbance = np.delete(absorbance, 0, axis=1)
 absorbance = np.vectorize(lambda x: float(x.replace(',', '.')))(absorbance)
-print(wavelength[0], wavelength[-1])
 
 coef, freqs = pywt.cwt(absorbance[0], np.arange(1,129), 'gaus1')
 
@@ -44,4 +49,49 @@ cbar2 = fig.colorbar(pcm, ax=ax2, label='Coefficient Value', cmap='inferno')
 ax2.set_aspect('auto')
 
 plt.tight_layout()  
+plt.show()
+
+# print(coef)
+
+resized_coef = cv2.resize(coef, (256, 256))
+normalized_coef = ((resized_coef - np.min(resized_coef)) / (np.max(resized_coef) - np.min(resized_coef))) * 255
+rgb_image = np.zeros((256, 256, 3), dtype=np.uint8)
+rgb_image[:,:,0] = normalized_coef  # Red channel
+rgb_image[:,:,1] = normalized_coef  # Green channel
+rgb_image[:,:,2] = normalized_coef  # Blue channel
+
+output_folder = 'absorbance_images'
+os.makedirs(output_folder, exist_ok=True)
+
+for i in range(len(absorbance)):
+    coef, freqs = pywt.cwt(absorbance[i], np.arange(1, 129), 'gaus1')
+    resized_coef = cv2.resize(coef, (256, 256))
+    normalized_coef = ((resized_coef - np.min(resized_coef)) / (np.max(resized_coef) - np.min(resized_coef))) * 255
+    rgb_image = np.zeros((256, 256, 3), dtype=np.uint8)
+    rgb_image[:, :, 0] = normalized_coef  # Red channel
+    rgb_image[:, :, 1] = normalized_coef  # Green channel
+    rgb_image[:, :, 2] = normalized_coef  # Blue channel
+
+    image_path = os.path.join(output_folder, f'absorbance_{i}.png')
+    cv2.imwrite(image_path, rgb_image)
+    print(f'Image {i} saved successfully at {image_path}')
+
+folder_path = 'absorbance_images'
+
+# Get a list of file paths for all images in the folder
+image_files = [os.path.join(folder_path, file) for file in os.listdir(folder_path) if file.endswith('.png')]
+
+# Randomly pick 10 images
+selected_images = random.sample(image_files, 10)
+
+# Plot the selected images
+fig, axes = plt.subplots(2, 5, figsize=(20, 8))
+for i, image_path in enumerate(selected_images):
+    ax = axes[i // 5, i % 5]
+    img = mpimg.imread(image_path)
+    ax.imshow(img)
+    ax.set_title(os.path.basename(image_path))
+    ax.axis('off')
+
+plt.tight_layout()
 plt.show()
